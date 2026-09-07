@@ -1,0 +1,50 @@
+cask "rondo" do
+  version "0.4.0"
+  sha256 "28c3e36246dd2eff6176a6e26bb0335c251e327b40ee8b22a55290c8e0933e39"
+
+  url "https://github.com/sonatelle/rondo/releases/download/v#{version}/Rondo-#{version}.dmg"
+  name "Rondo"
+  desc "Subscription tracker with a local SQLite store"
+  homepage "https://github.com/sonatelle/rondo"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  # Both come from apple/project.yml in rondo: ARCHS is arm64 and the
+  # deployment target is macOS 14.0. Without these the cask would happily
+  # install, onto machines that cannot run what it installed.
+  depends_on arch: :arm64
+  depends_on macos: ">= :sonoma"
+
+  # The menu bar item keeps the process alive with no window open, so an
+  # uninstall left to itself would replace the bundle under a running app.
+  uninstall quit: "com.sonatelle.rondo"
+
+  app "Rondo.app"
+
+  # Rondo is ad-hoc signed and not notarized, and Homebrew quarantines what it
+  # downloads - the --no-quarantine flag users once reached for was removed in
+  # Homebrew 5.1. Left alone, this cask would install an app that then refuses
+  # to open. Clearing the attribute is how it opens, and it is worth naming
+  # plainly: it waives Gatekeeper's check for this one bundle. The README says
+  # so too, rather than leaving it to be found out.
+  #
+  # The old block form, not postflight_steps: the newer form passes `args`
+  # through as plain strings, so the path would have to be a hard-coded
+  # /Applications and would miss anyone who set --appdir.
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Rondo.app"]
+  end
+
+  zap trash: [
+    # The app is sandboxed, so the database and the preferences are both
+    # inside the container rather than in the usual two places.
+    "~/Library/Containers/com.sonatelle.rondo",
+    # Where an unsandboxed build puts the database, which is what a developer
+    # running one from Xcode would be left with.
+    "~/Library/Application Support/Rondo",
+  ]
+end
