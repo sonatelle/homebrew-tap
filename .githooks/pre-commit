@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# pre-commit: refuse a commit made directly on main.
+set -euo pipefail
+
+if [[ "${SONATELLE_TAP_ALLOW_MAIN:-}" == "1" ]]; then
+  exit 0
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+if [[ "$branch" == "main" ]]; then
+  cat >&2 <<'MESSAGE'
+error: direct commits to main are forbidden in this repository.
+
+  Create a branch, then commit:
+    git switch -c type/short-topic
+    git commit ...
+
+  Land changes with a pull request; do not merge to main locally.
+MESSAGE
+  exit 1
+fi
+
+exit 0

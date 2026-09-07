@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# pre-push: refuse a push that would write or delete main on the remote.
+set -euo pipefail
+
+if [[ "${SONATELLE_TAP_ALLOW_MAIN:-}" == "1" ]]; then
+  exit 0
+fi
+
+# git feeds one line per ref being pushed on stdin; the remote name and URL
+# arrive as arguments, which this hook does not need.
+readonly ZERO="0000000000000000000000000000000000000000"
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  [[ -z "${remote_ref:-}" ]] && continue
+  [[ "$remote_ref" != "refs/heads/main" ]] && continue
+
+  if [[ "$local_sha" == "$ZERO" ]]; then
+    echo "error: refusing to delete main on the remote." >&2
+    exit 1
+  fi
+
+  cat >&2 <<'MESSAGE'
+error: direct pushes to main are forbidden in this repository.
+
+  Push the branch and open a pull request:
+    git push -u origin HEAD
+    gh pr create
+MESSAGE
+  exit 1
+done
+
+exit 0

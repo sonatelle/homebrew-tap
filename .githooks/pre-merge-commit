@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# pre-merge-commit: refuse a merge made into main locally.
+set -euo pipefail
+
+if [[ "${SONATELLE_TAP_ALLOW_MAIN:-}" == "1" ]]; then
+  exit 0
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+if [[ "$branch" == "main" ]]; then
+  cat >&2 <<'MESSAGE'
+error: local merges into main are forbidden in this repository.
+
+  Open a pull request and merge it on GitHub, then update local main:
+    git switch main && git pull --ff-only
+MESSAGE
+  exit 1
+fi
+
+exit 0
