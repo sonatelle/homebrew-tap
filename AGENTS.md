@@ -12,9 +12,17 @@ called `homebrew-tap`.
 `version` and `sha256` in `Casks/rondo.rb` are written by
 `.github/workflows/tap.yml` in [sonatelle/rondo](https://github.com/sonatelle/rondo),
 which runs when a Rondo release is published: it downloads the disk image,
-hashes it, and commits the two lines. Editing them here by hand invites a
-checksum that was typed rather than computed, and the next release would
-overwrite it anyway. Everything else in the cask is edited here.
+hashes it, and commits the two lines straight to `main`. Editing them here
+by hand invites a checksum that was typed rather than computed, and the next
+release would overwrite it anyway. Everything else in the cask is edited
+here.
+
+That workflow is the one thing allowed to write `main` without a pull
+request. It is holding a checksum it computed a moment earlier from the file
+it just downloaded, so there is nothing for a reviewer to check that the job
+has not already checked; and a release that has been published is one people
+can install, which is a poor moment to be waiting on a review. It reads back
+both lines after writing them and fails if either did not change.
 
 ## Layout
 
@@ -76,8 +84,11 @@ README says so in as many words; keep it that way.
 ## Git Workflow
 
 All changes land through a short-lived branch and a pull request; `main` is
-never committed to, merged into, or pushed directly. `.githooks/` enforces
-this locally. After cloning:
+never committed to, merged into, or pushed directly by a person or an agent.
+The one exception is the version bump described above, which arrives from
+rondo's workflow. `.githooks/` enforces this locally - the hooks are not
+installed in a CI checkout, which is why the workflow gets past them. After
+cloning:
 
 ```bash
 git config core.hooksPath .githooks
