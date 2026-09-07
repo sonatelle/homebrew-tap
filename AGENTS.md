@@ -33,9 +33,13 @@ There are no formulae. Sonatelle's command-line tools would go under
   the file, not from a release page's summary.
 - `url` and `homepage` are both on github.com, so no `verified:` stanza.
 - Say what the app actually requires. Rondo's `depends_on arch: :arm64` and
-  `depends_on macos: ">= :sonoma"` come from `ARCHS` and the deployment
-  target in rondo's `apple/project.yml`; a cask that omitted them would
-  install onto machines that cannot run what it installed.
+  `depends_on macos: :sonoma` come from `ARCHS` and the deployment target in
+  rondo's `apple/project.yml`; a cask that omitted them would install onto
+  machines that cannot run what it installed. Use the symbol form - the
+  string comparison `">= :sonoma"` is deprecated and audit rejects it.
+- Keep the stanzas in the canonical order and the `zap` list alphabetical.
+  `Cask/StanzaOrder` and `Cask/ArrayAlphabetization` both fail the build over
+  it, and neither is worth a second CI round.
 - Give every cask a `zap`. Sonatelle's apps are sandboxed, so their data is
   under `~/Library/Containers/<bundle id>` rather than in the usual two or
   three places.
@@ -45,23 +49,26 @@ There are no formulae. Sonatelle's command-line tools would go under
 ### Clearing Quarantine
 
 Sonatelle's apps are ad-hoc signed and not notarized, and Homebrew always
-quarantines what it downloads. A cask without a `postflight` that clears the
+quarantines what it downloads. A cask without a step that clears the
 attribute installs an app that cannot be opened.
 
-Use the block form and `-d` rather than `-c`:
-
 ```ruby
-postflight do
-  system_command "/usr/bin/xattr",
-                 args: ["-dr", "com.apple.quarantine", "#{appdir}/Rondo.app"]
+postflight_steps do
+  run "/usr/bin/xattr",
+      args:           ["-dr", "com.apple.quarantine", "{{appdir}}/Rondo.app"],
+      writable_paths: ["Rondo.app"],
+      writable_base:  :appdir
 end
 ```
 
-`postflight_steps` passes `args` through as plain strings, so the path would
-have to be a hard-coded `/Applications` and would miss anyone who set
-`--appdir`. And `-d com.apple.quarantine` removes the one attribute that is
-in the way, where `-c` would clear every extended attribute the bundle
-carries.
+Three things there are deliberate:
+
+- `postflight_steps`, not a `postflight` block. The `Cask/InstallSteps` cop
+  rejects the block form outright now, third-party taps included.
+- `{{appdir}}`, not a literal `/Applications`. Step arguments are expanded at
+  run time, so this lands on the right bundle for anyone who set `--appdir`.
+- `-d com.apple.quarantine`, not `-c`. It removes the one attribute that is
+  in the way; `-c` would clear every extended attribute the bundle carries.
 
 This is a real waiver of Gatekeeper's check, made on the user's behalf. The
 README says so in as many words; keep it that way.
