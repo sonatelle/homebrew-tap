@@ -16,11 +16,7 @@ cask "rondo" do
   # deployment target is macOS 14.0. Without these the cask would happily
   # install, onto machines that cannot run what it installed.
   depends_on arch: :arm64
-  depends_on macos: ">= :sonoma"
-
-  # The menu bar item keeps the process alive with no window open, so an
-  # uninstall left to itself would replace the bundle under a running app.
-  uninstall quit: "com.sonatelle.rondo"
+  depends_on macos: :sonoma
 
   app "Rondo.app"
 
@@ -31,20 +27,27 @@ cask "rondo" do
   # plainly: it waives Gatekeeper's check for this one bundle. The README says
   # so too, rather than leaving it to be found out.
   #
-  # The old block form, not postflight_steps: the newer form passes `args`
-  # through as plain strings, so the path would have to be a hard-coded
-  # /Applications and would miss anyone who set --appdir.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Rondo.app"]
+  # {{appdir}} rather than a literal /Applications: step arguments are expanded
+  # at run time, so this still lands on the right bundle for anyone who set
+  # --appdir. And -d com.apple.quarantine removes the one attribute that is in
+  # the way, where -c would clear every extended attribute the bundle carries.
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args:           ["-dr", "com.apple.quarantine", "{{appdir}}/Rondo.app"],
+        writable_paths: ["Rondo.app"],
+        writable_base:  :appdir
   end
 
+  # The menu bar item keeps the process alive with no window open, so an
+  # uninstall left to itself would replace the bundle under a running app.
+  uninstall quit: "com.sonatelle.rondo"
+
   zap trash: [
-    # The app is sandboxed, so the database and the preferences are both
-    # inside the container rather than in the usual two places.
-    "~/Library/Containers/com.sonatelle.rondo",
     # Where an unsandboxed build puts the database, which is what a developer
     # running one from Xcode would be left with.
     "~/Library/Application Support/Rondo",
+    # The app is sandboxed, so the database and the preferences are both
+    # inside the container rather than in the usual two places.
+    "~/Library/Containers/com.sonatelle.rondo",
   ]
 end
