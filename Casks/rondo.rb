@@ -1,6 +1,6 @@
 cask "rondo" do
-  version "0.4.0"
-  sha256 "28c3e36246dd2eff6176a6e26bb0335c251e327b40ee8b22a55290c8e0933e39"
+  version "0.5.0"
+  sha256 "2bde4e818d879b46ae1159e441850d08f4f28429cf1f0c005f420770c51e28b4"
 
   url "https://github.com/sonatelle/rondo/releases/download/v#{version}/Rondo-#{version}.dmg"
   name "Rondo"
